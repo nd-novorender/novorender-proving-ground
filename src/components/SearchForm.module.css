@@ -1,0 +1,13 @@
+.form {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background-color: rgba(0, 0, 0, 0.6);
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+.form input {
+  width: 180px;
+  margin-bottom: 0.5rem;
+}

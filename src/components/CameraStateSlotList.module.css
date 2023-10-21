@@ -1,0 +1,22 @@
+.container {
+  position: absolute;
+  top: 1rem;
+  width: 100vw;
+  left: 0;
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.btn {
+  min-width: 180px;
+  min-height: 56px;
+}
+
+.empty {
+  opacity: 0.5;
+}
+
+.secondary {
+  font-size: 0.6rem;
+}
