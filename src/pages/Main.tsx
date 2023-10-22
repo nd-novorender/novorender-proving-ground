@@ -5,7 +5,10 @@ import { useEffect, useRef, useState } from "react";
 import { SearchForm } from "../components/SearchForm";
 import { CameraStateSlotList } from "../components/CameraStateSlotList";
 
-const baseUrl = new URL("/novorender/api/", window.location.origin);
+const baseUrl = new URL(
+  `${import.meta.env.BASE_URL || ""}/novorender/api/`,
+  window.location.origin
+);
 const gpuTier = 2;
 const deviceProfile = getDeviceProfile(gpuTier);
 
