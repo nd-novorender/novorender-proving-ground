@@ -10,8 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@novorender/api": "^0.0.38",
-    "@novorender/data-js-api": "^0.2.26",
+    "@novorender/api": "0.1.22",
+    "@novorender/data-js-api": "0.2.26",
+    "@novorender/webgl-api": "0.4.21",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },

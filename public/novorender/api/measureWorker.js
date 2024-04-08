@@ -6277,6 +6277,9 @@ var GeometryFactory = class {
   }
   getCurve2D(data, halfEdgeIndex) {
     const halfEdgeData = data.halfEdges[halfEdgeIndex];
+    if (halfEdgeData.curve2D == void 0) {
+      return void 0;
+    }
     let [beginParam, endParam] = halfEdgeData.parameterBounds;
     let sense = 1;
     if (halfEdgeData.direction < 0) {
@@ -6328,7 +6331,14 @@ var GeometryFactory = class {
     );
   }
   getHalfEdgeAABB(data, halfEdgeIndex) {
+    const halfEdgeData = data.halfEdges[halfEdgeIndex];
+    if (halfEdgeData.aabb) {
+      return halfEdgeData.aabb;
+    }
     const curve = this.getCurve2D(data, halfEdgeIndex);
+    if (!curve) {
+      return void 0;
+    }
     const points = [];
     switch (curve.kind) {
       case "line":
@@ -6537,10 +6547,17 @@ var GeometryFactory = class {
     );
   }
   getFaces(product) {
-    const curves2D = product.halfEdges.map((_, i) => {
-      return this.getCurve2D(product, i);
-    });
+    const curves2D = [];
+    for (let i = 0; i < product.halfEdges.length; ++i) {
+      const curve = this.getCurve2D(product, i);
+      if (curve) {
+        curves2D.push(curve);
+      }
+    }
     const faces = [];
+    if (curves2D.length == 0) {
+      return faces;
+    }
     for (let i = 0; i < product.instances.length; ++i) {
       const instance = product.instances[i];
       const faceFunc = (faceIdx) => {
@@ -6779,9 +6796,9 @@ var Downloader = class {
   activeDownloads = 0;
   async request(filename) {
     const url = new URL(filename, this.baseUrl);
-    const request = new Request(url, { mode: "cors" });
     if (!url.search)
       url.search = this.baseUrl?.search ?? "";
+    const request = new Request(url, { mode: "cors" });
     const response = await requestOfflineFile(request) ?? await fetch(url.toString(), { mode: "cors" });
     if (!response.ok) {
       throw new Error(`HTTP Error: ${response.status}: ${response.statusText}`);
@@ -6847,7 +6864,7 @@ var LineStrip3D = class {
       }
     }
     const start = vertices[segIndex];
-    const dir = segIndex < vertices.length - 1 ? vec3_exports.subtract(vec3_exports.create(), vertices[segIndex + 1], start) : vec3_exports.subtract(vec3_exports.create(), vertices[segIndex - 1], start);
+    const dir = segIndex < vertices.length - 1 ? vec3_exports.subtract(vec3_exports.create(), vertices[segIndex + 1], start) : vec3_exports.subtract(vec3_exports.create(), start, vertices[segIndex - 1]);
     vec3_exports.normalize(dir, dir);
     if (point) {
       const segStartParam = tesselationParameters[segIndex];
@@ -7573,17 +7590,17 @@ function closestPointToArc(point, arc, mat) {
   return pointOnCircle;
 }
 function getCurveToCurveMeasureValues(productA, curveA, instanceIdxA, productB, curveB, instanceIdxB) {
-  let curveDataA = { prouct: productA, curve: curveA, instance: instanceIdxA };
-  let curveDataB = { prouct: productB, curve: curveB, instance: instanceIdxB };
+  let curveDataA = { product: productA, curve: curveA, instance: instanceIdxA };
+  let curveDataB = { product: productB, curve: curveB, instance: instanceIdxB };
   const entities = [curveDataA, curveDataB];
   entities.sort((a, b) => a.curve.kind.localeCompare(b.curve.kind));
   [curveDataA, curveDataB] = entities;
   const kindCombo = `${curveDataA.curve.kind}_${curveDataB.curve.kind}`;
   const matA = matFromInstance(
-    curveDataA.prouct.instances[curveDataA.instance]
+    curveDataA.product.instances[curveDataA.instance]
   );
   const matB = matFromInstance(
-    curveDataB.prouct.instances[curveDataB.instance]
+    curveDataB.product.instances[curveDataB.instance]
   );
   switch (kindCombo) {
     case "line_line": {
@@ -7954,7 +7971,7 @@ async function getCurveToSurfaceMeasureValues(curve, productA, curveInstanceIdx,
           faceData,
           cylinderMat,
           unitToScale(productB.units),
-          setting ? setting.cylinderMeasure : "center"
+          setting?.cylinderMeasure ? setting.cylinderMeasure : "center"
         );
       }
       case "lineStrip_cylinder": {
@@ -7974,7 +7991,7 @@ async function getCurveToSurfaceMeasureValues(curve, productA, curveInstanceIdx,
             faceData,
             cylinderMat,
             unitToScale(productB.units),
-            setting ? setting.cylinderMeasure : "center"
+            setting?.cylinderMeasure ? setting.cylinderMeasure : "center"
           );
           if (measureValue.distance && measureValue.distance < minDist) {
             bestMeasureValues = measureValue;
@@ -8314,8 +8331,8 @@ async function getFaceToFaceMeasureValues(productA, faceIdxA, instanceIdxA, prod
           surfaceB.product,
           surfaceB.faceData,
           unitToScale(surfaceB.product.units),
-          surfaceA.setting ? surfaceA.setting.cylinderMeasure : "center",
-          surfaceB.setting ? surfaceB.setting.cylinderMeasure : "center"
+          surfaceA.setting?.cylinderMeasure ? surfaceA.setting.cylinderMeasure : "center",
+          surfaceB.setting?.cylinderMeasure ? surfaceB.setting.cylinderMeasure : "center"
         );
       }
       case "cylinder_plane": {
@@ -8337,7 +8354,7 @@ async function getFaceToFaceMeasureValues(productA, faceIdxA, instanceIdxA, prod
           surfaceB.instanceIdx,
           unitToScale(surfaceA.product.units),
           canUseCylinderSettings,
-          surfaceA.setting && canUseCylinderSettings ? surfaceA.setting.cylinderMeasure : "center"
+          surfaceA.setting?.cylinderMeasure && canUseCylinderSettings ? surfaceA.setting.cylinderMeasure : "center"
         );
       }
     }
@@ -9418,9 +9435,12 @@ async function addCenterLinesFromCylinders(product, centerLines, scale6, setting
   }
 }
 function centerLinesToLinesTrip(centerLines) {
+  if (centerLines.length == 1) {
+    return [centerLines[0].start, centerLines[0].end];
+  }
   const compare = (a, radiusA, b, radiusB) => {
     const dist4 = vec3_exports.distance(a, b);
-    return dist4 < (radiusA + radiusB) / 2;
+    return dist4 < radiusA + radiusB;
   };
   let startSegment = void 0;
   for (let i = 0; i < centerLines.length; ++i) {
@@ -9498,7 +9518,6 @@ function centerLinesToLinesTrip(centerLines) {
   }
   const lineStrip = [];
   if (startSegment && startSegment.next === void 0) {
-    const len4 = vec3_exports.distance(startSegment.start, startSegment.end);
     lineStrip.push(vec3_exports.clone(startSegment.start));
     lineStrip.push(vec3_exports.clone(startSegment.end));
   } else if (startSegment && startSegment.next !== void 0) {
@@ -9744,7 +9763,7 @@ async function getCylinderDrawParts(product, instanceIdx, cylinderData, face, se
       to: cylinderEnd[2],
       horizontalDisplay: diff[2] < planarLength
     },
-    text: [[`L ${length4.toFixed(3)}m   \u2300 ${(cylinderData.radius * 2).toFixed(3)}m   ${vertical ? "" : `% ${(Math.abs(diff[2] / planarLength) * 100).toFixed(2)}`}`]]
+    text: [[`L ${length4.toFixed(3)}m   \u2300 ${(cylinderData.radius * 2 * unitToScale(product.units)).toFixed(3)}m   ${vertical ? "" : `% ${(Math.abs(diff[2] / planarLength) * 100).toFixed(2)}`}`]]
   });
   for (const halfEdgeIdx of loop.halfEdges) {
     const halfEdgeData = product.halfEdges[halfEdgeIdx];
@@ -9777,7 +9796,7 @@ async function getCylinderDrawParts(product, instanceIdx, cylinderData, face, se
 async function getSurfaceDrawParts(product, instanceIdx, face) {
   const loop = product.loops[face.outerLoop];
   const drawParts = [];
-  async function loopToVertices(loop2) {
+  async function loopToVertices(loop2, isVoid) {
     const vertices = [];
     const hasLineOnEitherSide = [];
     const text2 = [];
@@ -9812,17 +9831,17 @@ async function getSurfaceDrawParts(product, instanceIdx, face) {
         }
       }
     }
-    if (vertices.length > 3) {
-      let prev = vec3_exports.sub(vec3_exports.create(), vertices[vertices.length - 1], vertices[0]);
+    if (vertices.length > 4 && (vertices.length < 15 || !isVoid)) {
+      let prev = vec3_exports.sub(vec3_exports.create(), vertices[vertices.length - 2], vertices[0]);
       let next = vec3_exports.create();
       for (let i = 0; i < vertices.length - 1; ++i) {
         next = vec3_exports.sub(vec3_exports.create(), vertices[i + 1], vertices[i]);
         if (hasLineOnEitherSide[i]) {
           text2.push(vec3_exports.length(next).toFixed(3));
-          const prevIdx = i == 0 ? vertices.length - 1 : i - 1;
+          const prevIdx = i == 0 ? vertices.length - 2 : i - 1;
           if (hasLineOnEitherSide[prevIdx] && hasLineOnEitherSide[i + 1]) {
             const angle3 = vec3_exports.angle(prev, next) * (180 / Math.PI);
-            if (angle3 > 0.1 && (angle3 > 92 || angle3 < 88)) {
+            if (angle3 > 0.1) {
               drawParts.push({
                 text: angle3.toFixed(1) + "\xB0",
                 drawType: "angle",
@@ -9840,13 +9859,13 @@ async function getSurfaceDrawParts(product, instanceIdx, face) {
     return { vertices, text: text2 };
   }
   const text = [];
-  const { vertices: outerVerts, text: outerTexts } = await loopToVertices(loop);
+  const { vertices: outerVerts, text: outerTexts } = await loopToVertices(loop, false);
   text.push(outerTexts);
   const voids = [];
   if (face.innerLoops) {
     for (const innerLoopIdx of face.innerLoops) {
       const innerLoop = product.loops[innerLoopIdx];
-      const { vertices: innerVerts, text: innerTexts } = await loopToVertices(innerLoop);
+      const { vertices: innerVerts, text: innerTexts } = await loopToVertices(innerLoop, true);
       text.push(innerTexts);
       voids.push({ vertices3D: innerVerts });
     }
@@ -10345,13 +10364,22 @@ var RoadTool = class {
           centerDir = vec3_exports.sub(vec3_exports.create(), nextCenter, currCenter);
           vec3_exports.normalize(centerDir, centerDir);
         } else {
-          const internalParam = Math.abs(param - intervals[index - 1]);
+          let prevCenter = vec3_exports.create();
+          let prevSec;
+          let prevIdx = 0;
+          do {
+            ++prevIdx;
+            prevSec = sections[index - prevIdx];
+            const nextCenterIdx = prevSec.l == sec.l ? centerIdx : crossSections.codes[prevSec.l].findIndex((c) => c == 10);
+            prevCenter = prevSec.p[nextCenterIdx];
+          } while (vec3_exports.exactEquals(currCenter, prevCenter) && index - prevIdx > 0);
+          const internalParam = Math.abs(param - intervals[index - prevIdx]);
           if (internalParam > 10) {
             return void 0;
           }
-          const prevSec = sections[index - 1];
-          const nextCenterIdx = prevSec.l == sec.l ? centerIdx : crossSections.codes[prevSec.l].findIndex((c) => c == 10);
-          const prevCenter = prevSec.p[nextCenterIdx];
+          if (vec3_exports.exactEquals(currCenter, prevCenter)) {
+            return void 0;
+          }
           centerDir = vec3_exports.sub(vec3_exports.create(), currCenter, prevCenter);
           vec3_exports.normalize(centerDir, centerDir);
           pts = prevSec.l == sec.l ? prevSec.p.map((p, i) => {
@@ -10382,14 +10410,13 @@ var RoadTool = class {
           return vec2_exports.fromValues(_p[0], _p[1]);
         });
         const points = pts.map((p) => {
-          const _p = vec3_exports.clone(p);
-          return _p;
+          return vec3_exports.scaleAndAdd(vec3_exports.create(), p, centerDir, 1e-3);
         });
         const sectionCodes = codes[sec.l];
         const { leftShoulder, rightShoulder } = this.findShoulderIndex(sectionCodes);
-        const cp = vec3_exports.clone(pts[centerIdx]);
-        const lp = vec3_exports.clone(pts[leftShoulder]);
-        const rp = vec3_exports.clone(pts[rightShoulder]);
+        const cp = vec3_exports.clone(points[centerIdx]);
+        const lp = vec3_exports.clone(points[leftShoulder]);
+        const rp = vec3_exports.clone(points[rightShoulder]);
         const cp2d = vec2_exports.fromValues(cp[0], cp[1]);
         const lp2d = vec2_exports.fromValues(lp[0], lp[1]);
         const rp2d = vec2_exports.fromValues(rp[0], rp[1]);
@@ -10532,12 +10559,20 @@ var MeasureTool = class _MeasureTool {
   async init(wasm) {
     _MeasureTool.geometryFactory = await createGeometryFactory(wasm);
   }
-  async loadScene(baseUrl) {
-    const brepUrl = new URL(baseUrl);
-    brepUrl.pathname += "brep/";
-    this.downloader = new Downloader(brepUrl);
+  async loadScene(baseUrl, lutPath) {
+    const url = new URL(baseUrl);
+    const idx = lutPath.indexOf("/") + 1;
+    if (idx > 0) {
+      const dir = lutPath.substring(0, idx);
+      url.pathname += dir;
+      lutPath = lutPath.substring(idx);
+    }
+    this.downloader = new Downloader(url);
+    if (lutPath.length === 0) {
+      lutPath = "object_id_to_brep_hash";
+    }
     try {
-      this.idToHash = new Uint8Array(await this.downloader.downloadArrayBuffer("object_id_to_brep_hash"));
+      this.idToHash = new Uint8Array(await this.downloader.downloadArrayBuffer(lutPath));
     } catch {
       this.idToHash = void 0;
     }
@@ -10564,7 +10599,11 @@ var MeasureTool = class _MeasureTool {
     const { idToHash } = this;
     if (idToHash) {
       const hash = this.lookupHash(id);
-      return hash ? await this.downloader.downloadJson(hash) : null;
+      try {
+        return hash ? await this.downloader.downloadJson(hash) : null;
+      } catch {
+        return null;
+      }
     } else {
       try {
         return await this.downloader.downloadJson(`${id}.json`);
@@ -10584,6 +10623,13 @@ var MeasureTool = class _MeasureTool {
       this.data.set(id, product);
     }
     return product ?? void 0;
+  }
+  async isBrepGenerated(id) {
+    const product = await this.getProduct(id);
+    if (product) {
+      return product.version !== void 0;
+    }
+    return false;
   }
   async getCameraValuesFromFace(id, faceIdx, instanceIdx, cameraDir) {
     const product = await this.getProduct(id);
@@ -10736,7 +10782,7 @@ var MeasureTool = class _MeasureTool {
     }
     return [];
   }
-  async viableFollowPathEntity(id) {
+  async getCurveSegmentEntity(id) {
     const product = await this.getProduct(id);
     if (product) {
       if (product.curveSegments && product.curveSegments.length > 0) {
@@ -10772,25 +10818,62 @@ var MeasureTool = class _MeasureTool {
     }
     return [];
   }
-  async tesselateCurveSegment(id, curveSegmentIdx, instanceIdx) {
+  tesselateCurveSegment(product, curveSeg, instanceIdx) {
+    if (curveSeg) {
+      const curve = {
+        curve: curveSeg,
+        geometryTransformation: matFromInstance(
+          product.instances[instanceIdx]
+        ),
+        instanceIndex: instanceIdx
+      };
+      return getEdgeStrip(curve, 1);
+    }
+    return [];
+  }
+  async getCurveFromSegment(id, curveSegmentIdx) {
     const product = await this.getProduct(id);
     if (product) {
       const curveSeg = _MeasureTool.geometryFactory.getCurve3DFromSegment(
         product,
         curveSegmentIdx
       );
-      if (curveSeg) {
-        const curve = {
-          curve: curveSeg,
-          geometryTransformation: matFromInstance(
-            product.instances[instanceIdx]
-          ),
-          instanceIndex: instanceIdx
+      return curveSeg;
+    }
+  }
+  async getCurveSegmentDrawObject(id, curveSegmentIdx, instanceIdx, segmentLabelInterval) {
+    const product = await this.getProduct(id);
+    if (product) {
+      const curve = await this.getCurveFromSegment(id, curveSegmentIdx);
+      if (curve) {
+        const wsVertices = await this.tesselateCurveSegment(
+          product,
+          curve,
+          instanceIdx
+        );
+        const drawObject = {
+          kind: "curveSegment",
+          parts: [{ vertices3D: wsVertices, drawType: "lines" }]
         };
-        return getEdgeStrip(curve, 1);
+        if (segmentLabelInterval && segmentLabelInterval > 0) {
+          const texts = [];
+          const vertices3D = [];
+          for (let p = curve.beginParam; p < curve.endParam; p += segmentLabelInterval) {
+            const pos = vec3_exports.create();
+            curve.eval(p, pos, void 0);
+            vertices3D.push(pos);
+            texts.push(`P = ${p.toFixed(0)}`);
+          }
+          drawObject.parts.push({ drawType: "text", vertices3D, text: [texts] });
+          return { ...drawObject, kind: "complex" };
+        }
+        return drawObject;
       }
     }
-    return [];
+    return {
+      kind: "curveSegment",
+      parts: [{ vertices3D: [], drawType: "lines" }]
+    };
   }
   async curveSegmentProfile(id, curveSegmentIdx, instanceIdx) {
     const product = await this.getProduct(id);

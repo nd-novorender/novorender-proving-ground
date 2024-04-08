@@ -696,6 +696,165 @@ var BufferReader = class {
   }
 };
 
+// /projects/Novorender/ts/dist/webgl2/misc.ts
+function getBufferViewType(type) {
+  switch (type) {
+    case "BYTE":
+      return Int8Array;
+    case "UNSIGNED_BYTE":
+      return Uint8Array;
+    case "SHORT":
+      return Int16Array;
+    case "UNSIGNED_SHORT_5_6_5":
+    case "UNSIGNED_SHORT_4_4_4_4":
+    case "UNSIGNED_SHORT_5_5_5_1":
+    case "HALF_FLOAT":
+    case "HALF_FLOAT_OES":
+      return Uint16Array;
+    case "UNSIGNED_INT":
+    case "UNSIGNED_INT_24_8_WEBGL":
+    case "UNSIGNED_INT_5_9_9_9_REV":
+    case "UNSIGNED_INT_2_10_10_10_REV":
+    case "UNSIGNED_INT_10F_11F_11F_REV":
+      return Uint32Array;
+    case "INT":
+      return Int32Array;
+    case "FLOAT":
+      return Float32Array;
+  }
+  throw new Error(`Unknown buffer type: ${type}!`);
+}
+
+// /projects/Novorender/ts/dist/webgl2/texture.ts
+var internalFormat2FormatLookup = {
+  [6407 /* RGB */]: 6407 /* RGB */,
+  [6408 /* RGBA */]: 6408 /* RGBA */,
+  [6410 /* LUMINANCE_ALPHA */]: 6410 /* LUMINANCE_ALPHA */,
+  [6409 /* LUMINANCE */]: 6409 /* LUMINANCE */,
+  [6406 /* ALPHA */]: 6406 /* ALPHA */,
+  [33321 /* R8 */]: 6403 /* RED */,
+  [36756 /* R8_SNORM */]: 6403 /* RED */,
+  [33323 /* RG8 */]: 33319 /* RG */,
+  [36757 /* RG8_SNORM */]: 33319 /* RG */,
+  [32849 /* RGB8 */]: 6407 /* RGB */,
+  [36758 /* RGB8_SNORM */]: 6407 /* RGB */,
+  [36194 /* RGB565 */]: 6407 /* RGB */,
+  [32854 /* RGBA4 */]: 6408 /* RGBA */,
+  [32855 /* RGB5_A1 */]: 6408 /* RGBA */,
+  [32856 /* RGBA8 */]: 6408 /* RGBA */,
+  [36759 /* RGBA8_SNORM */]: 6408 /* RGBA */,
+  [32857 /* RGB10_A2 */]: 6408 /* RGBA */,
+  [36975 /* RGB10_A2UI */]: 36249 /* RGBA_INTEGER */,
+  [35905 /* SRGB8 */]: 6407 /* RGB */,
+  [35907 /* SRGB8_ALPHA8 */]: 6408 /* RGBA */,
+  [33325 /* R16F */]: 6403 /* RED */,
+  [33327 /* RG16F */]: 33319 /* RG */,
+  [34843 /* RGB16F */]: 6407 /* RGB */,
+  [34842 /* RGBA16F */]: 6408 /* RGBA */,
+  [33326 /* R32F */]: 6403 /* RED */,
+  [33328 /* RG32F */]: 33319 /* RG */,
+  [34837 /* RGB32F */]: 6407 /* RGB */,
+  [34836 /* RGBA32F */]: 6408 /* RGBA */,
+  [35898 /* R11F_G11F_B10F */]: 6407 /* RGB */,
+  [35901 /* RGB9_E5 */]: 6407 /* RGB */,
+  [33329 /* R8I */]: 36244 /* RED_INTEGER */,
+  [33330 /* R8UI */]: 36244 /* RED_INTEGER */,
+  [33331 /* R16I */]: 36244 /* RED_INTEGER */,
+  [33332 /* R16UI */]: 36244 /* RED_INTEGER */,
+  [33333 /* R32I */]: 36244 /* RED_INTEGER */,
+  [33334 /* R32UI */]: 36244 /* RED_INTEGER */,
+  [33335 /* RG8I */]: 33320 /* RG_INTEGER */,
+  [33336 /* RG8UI */]: 33320 /* RG_INTEGER */,
+  [33337 /* RG16I */]: 33320 /* RG_INTEGER */,
+  [33338 /* RG16UI */]: 33320 /* RG_INTEGER */,
+  [33339 /* RG32I */]: 33320 /* RG_INTEGER */,
+  [33340 /* RG32UI */]: 33320 /* RG_INTEGER */,
+  [36239 /* RGB8I */]: 36248 /* RGB_INTEGER */,
+  [36221 /* RGB8UI */]: 36248 /* RGB_INTEGER */,
+  [36233 /* RGB16I */]: 36248 /* RGB_INTEGER */,
+  [36215 /* RGB16UI */]: 36248 /* RGB_INTEGER */,
+  [36227 /* RGB32I */]: 36248 /* RGB_INTEGER */,
+  [36209 /* RGB32UI */]: 36248 /* RGB_INTEGER */,
+  [36238 /* RGBA8I */]: 36249 /* RGBA_INTEGER */,
+  [36220 /* RGBA8UI */]: 36249 /* RGBA_INTEGER */,
+  [36232 /* RGBA16I */]: 36249 /* RGBA_INTEGER */,
+  [36214 /* RGBA16UI */]: 36249 /* RGBA_INTEGER */,
+  [36226 /* RGBA32I */]: 36249 /* RGBA_INTEGER */,
+  [36208 /* RGBA32UI */]: 36249 /* RGBA_INTEGER */,
+  [33189 /* DEPTH_COMPONENT16 */]: 6402 /* DEPTH_COMPONENT */,
+  [33190 /* DEPTH_COMPONENT24 */]: 6402 /* DEPTH_COMPONENT */,
+  [36012 /* DEPTH_COMPONENT32F */]: 6402 /* DEPTH_COMPONENT */,
+  [35056 /* DEPTH24_STENCIL8 */]: 34041 /* DEPTH_STENCIL */,
+  [36013 /* DEPTH32F_STENCIL8 */]: 34041 /* DEPTH_STENCIL */
+};
+var compressedFormats = {
+  // WEBGL_compressed_texture_s3tc
+  COMPRESSED_RGB_S3TC_DXT1_EXT: 33776 /* COMPRESSED_RGB_S3TC_DXT1_EXT */,
+  COMPRESSED_RGBA_S3TC_DXT1_EXT: 33777 /* COMPRESSED_RGBA_S3TC_DXT1_EXT */,
+  COMPRESSED_RGBA_S3TC_DXT3_EXT: 33778 /* COMPRESSED_RGBA_S3TC_DXT3_EXT */,
+  COMPRESSED_RGBA_S3TC_DXT5_EXT: 33779 /* COMPRESSED_RGBA_S3TC_DXT5_EXT */,
+  // WEBGL_compressed_texture_s3tc_srgb
+  COMPRESSED_SRGB_S3TC_DXT1_EXT: 35916 /* COMPRESSED_SRGB_S3TC_DXT1_EXT */,
+  COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT: 35917 /* COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT */,
+  COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT: 35918 /* COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT */,
+  COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT: 35919 /* COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT */,
+  // WEBGL_compressed_texture_etc
+  COMPRESSED_R11_EAC: 37488 /* COMPRESSED_R11_EAC */,
+  COMPRESSED_SIGNED_R11_EAC: 37489 /* COMPRESSED_SIGNED_R11_EAC */,
+  COMPRESSED_RG11_EAC: 37490 /* COMPRESSED_RG11_EAC */,
+  COMPRESSED_SIGNED_RG11_EAC: 37491 /* COMPRESSED_SIGNED_RG11_EAC */,
+  COMPRESSED_RGB8_ETC2: 37492 /* COMPRESSED_RGB8_ETC2 */,
+  COMPRESSED_RGBA8_ETC2_EAC: 37493 /* COMPRESSED_RGBA8_ETC2_EAC */,
+  COMPRESSED_SRGB8_ETC2: 37494 /* COMPRESSED_SRGB8_ETC2 */,
+  COMPRESSED_SRGB8_ALPHA8_ETC2_EAC: 37495 /* COMPRESSED_SRGB8_ALPHA8_ETC2_EAC */,
+  COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2: 37496 /* COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2 */,
+  COMPRESSED_SRGB8_PUNCHTHROUGH_ALPHA1_ETC2: 37497 /* COMPRESSED_SRGB8_PUNCHTHROUGH_ALPHA1_ETC2 */,
+  // WEBGL_compressed_texture_pvrtc
+  COMPRESSED_RGB_PVRTC_4BPPV1_IMG: 35840 /* COMPRESSED_RGB_PVRTC_4BPPV1_IMG */,
+  COMPRESSED_RGBA_PVRTC_4BPPV1_IMG: 35842 /* COMPRESSED_RGBA_PVRTC_4BPPV1_IMG */,
+  COMPRESSED_RGB_PVRTC_2BPPV1_IMG: 35841 /* COMPRESSED_RGB_PVRTC_2BPPV1_IMG */,
+  COMPRESSED_RGBA_PVRTC_2BPPV1_IMG: 35843 /* COMPRESSED_RGBA_PVRTC_2BPPV1_IMG */,
+  // WEBGL_compressed_texture_etc1    
+  COMPRESSED_RGB_ETC1_WEBGL: 36196 /* COMPRESSED_RGB_ETC1_WEBGL */,
+  // WEBGL_compressed_texture_astc    
+  COMPRESSED_RGBA_ASTC_4x4_KHR: 37808 /* COMPRESSED_RGBA_ASTC_4x4_KHR */,
+  COMPRESSED_SRGB8_ALPHA8_ASTC_4x4_KHR: 37840 /* COMPRESSED_SRGB8_ALPHA8_ASTC_4x4_KHR */,
+  COMPRESSED_RGBA_ASTC_5x4_KHR: 37809 /* COMPRESSED_RGBA_ASTC_5x4_KHR */,
+  COMPRESSED_SRGB8_ALPHA8_ASTC_5x4_KHR: 37841 /* COMPRESSED_SRGB8_ALPHA8_ASTC_5x4_KHR */,
+  COMPRESSED_RGBA_ASTC_5x5_KHR: 37810 /* COMPRESSED_RGBA_ASTC_5x5_KHR */,
+  COMPRESSED_SRGB8_ALPHA8_ASTC_5x5_KHR: 37842 /* COMPRESSED_SRGB8_ALPHA8_ASTC_5x5_KHR */,
+  COMPRESSED_RGBA_ASTC_6x5_KHR: 37811 /* COMPRESSED_RGBA_ASTC_6x5_KHR */,
+  COMPRESSED_SRGB8_ALPHA8_ASTC_6x5_KHR: 37843 /* COMPRESSED_SRGB8_ALPHA8_ASTC_6x5_KHR */,
+  COMPRESSED_RGBA_ASTC_6x6_KHR: 37812 /* COMPRESSED_RGBA_ASTC_6x6_KHR */,
+  COMPRESSED_SRGB8_ALPHA8_ASTC_6x6_KHR: 37844 /* COMPRESSED_SRGB8_ALPHA8_ASTC_6x6_KHR */,
+  COMPRESSED_RGBA_ASTC_8x5_KHR: 37813 /* COMPRESSED_RGBA_ASTC_8x5_KHR */,
+  COMPRESSED_SRGB8_ALPHA8_ASTC_8x5_KHR: 37845 /* COMPRESSED_SRGB8_ALPHA8_ASTC_8x5_KHR */,
+  COMPRESSED_RGBA_ASTC_8x6_KHR: 37814 /* COMPRESSED_RGBA_ASTC_8x6_KHR */,
+  COMPRESSED_SRGB8_ALPHA8_ASTC_8x6_KHR: 37846 /* COMPRESSED_SRGB8_ALPHA8_ASTC_8x6_KHR */,
+  COMPRESSED_RGBA_ASTC_8x8_KHR: 37815 /* COMPRESSED_RGBA_ASTC_8x8_KHR */,
+  COMPRESSED_SRGB8_ALPHA8_ASTC_8x8_KHR: 37847 /* COMPRESSED_SRGB8_ALPHA8_ASTC_8x8_KHR */,
+  COMPRESSED_RGBA_ASTC_10x5_KHR: 37816 /* COMPRESSED_RGBA_ASTC_10x5_KHR */,
+  COMPRESSED_SRGB8_ALPHA8_ASTC_10x5_KHR: 37848 /* COMPRESSED_SRGB8_ALPHA8_ASTC_10x5_KHR */,
+  COMPRESSED_RGBA_ASTC_10x6_KHR: 37817 /* COMPRESSED_RGBA_ASTC_10x6_KHR */,
+  COMPRESSED_SRGB8_ALPHA8_ASTC_10x6_KHR: 37849 /* COMPRESSED_SRGB8_ALPHA8_ASTC_10x6_KHR */,
+  COMPRESSED_RGBA_ASTC_10x10_KHR: 37819 /* COMPRESSED_RGBA_ASTC_10x10_KHR */,
+  COMPRESSED_SRGB8_ALPHA8_ASTC_10x10_KHR: 37851 /* COMPRESSED_SRGB8_ALPHA8_ASTC_10x10_KHR */,
+  COMPRESSED_RGBA_ASTC_12x10_KHR: 37820 /* COMPRESSED_RGBA_ASTC_12x10_KHR */,
+  COMPRESSED_SRGB8_ALPHA8_ASTC_12x10_KHR: 37852 /* COMPRESSED_SRGB8_ALPHA8_ASTC_12x10_KHR */,
+  COMPRESSED_RGBA_ASTC_12x12_KHR: 37821 /* COMPRESSED_RGBA_ASTC_12x12_KHR */,
+  COMPRESSED_SRGB8_ALPHA8_ASTC_12x12_KHR: 37853 /* COMPRESSED_SRGB8_ALPHA8_ASTC_12x12_KHR */,
+  // EXT_texture_compression_bptc    
+  COMPRESSED_RGBA_BPTC_UNORM_EXT: 36492 /* COMPRESSED_RGBA_BPTC_UNORM_EXT */,
+  COMPRESSED_SRGB_ALPHA_BPTC_UNORM_EXT: 36493 /* COMPRESSED_SRGB_ALPHA_BPTC_UNORM_EXT */,
+  COMPRESSED_RGB_BPTC_SIGNED_FLOAT_EXT: 36494 /* COMPRESSED_RGB_BPTC_SIGNED_FLOAT_EXT */,
+  COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT_EXT: 36495 /* COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT_EXT */,
+  // EXT_texture_compression_rgtc    
+  COMPRESSED_RED_RGTC1_EXT: 36283 /* COMPRESSED_RED_RGTC1_EXT */,
+  COMPRESSED_SIGNED_RED_RGTC1_EXT: 36284 /* COMPRESSED_SIGNED_RED_RGTC1_EXT */,
+  COMPRESSED_RED_GREEN_RGTC2_EXT: 36285 /* COMPRESSED_RED_GREEN_RGTC2_EXT */,
+  COMPRESSED_SIGNED_RED_GREEN_RGTC2_EXT: 36286 /* COMPRESSED_SIGNED_RED_GREEN_RGTC2_EXT */
+};
+
 // /projects/Novorender/ts/dist/core3d/ktx.ts
 var identifier = new Uint8Array([171, 75, 84, 88, 32, 49, 49, 187, 13, 10, 26, 10]);
 var HEADER_LEN = 12 + 13 * 4;
@@ -899,18 +1058,19 @@ function parseKTX(ktx) {
   const internalFormat = textureFormatInternal[header.glInternalFormat];
   const kind = isArray ? "TEXTURE_ARRAY" : isCube ? "TEXTURE_CUBE_MAP" : is3D ? "TEXTURE_3D" : "TEXTURE_2D";
   const type = header.glType ? textureDataType[header.glType] : void 0;
+  const arrayType = type ? getBufferViewType(type) : Uint8Array;
   const dim = { width: header.pixelWidth, height: header.pixelHeight, ...is3D ? { depth: header.pixelDepth } : void 0 };
   let mips = void 0;
   if (isCube) {
     const images = new Array(numMips).fill(null).map((_) => []);
     for (const image of getImages(header, ktx, littleEndian)) {
-      images[image.mip][image.face] = image.buffer;
+      images[image.mip][image.face] = new arrayType(image.buffer.slice().buffer);
     }
     mips = images;
   } else {
     mips = new Array(numMips);
     for (const image of getImages(header, ktx, littleEndian)) {
-      mips[image.mip] = image.buffer;
+      mips[image.mip] = new arrayType(image.buffer.slice().buffer);
     }
   }
   const imageData = hasMips ? { mipMaps: mips } : { image: mips[0] };
@@ -1525,14 +1685,6 @@ function getGeometry(wasm2, schema, separatePositionBuffer, enableOutlines, high
       }
     }
     const vertexBuffer = new ArrayBuffer(numVertices * vertexStride);
-    let trianglePosBuffer;
-    let triangleObjectIdBuffer;
-    let highlightBufferTri;
-    if (enableOutlines && primitiveType == PrimitiveType2.triangles) {
-      trianglePosBuffer = new Int16Array(new ArrayBuffer(numTriangles * trianglePosStride));
-      triangleObjectIdBuffer = new Uint32Array(numTriangles);
-      highlightBufferTri = new Uint8Array(numTriangles);
-    }
     const positionBuffer = separatePositionBuffer ? new ArrayBuffer(numVertices * positionStride) : void 0;
     let indexBuffer;
     if (vertexIndex) {
@@ -1547,10 +1699,7 @@ function getGeometry(wasm2, schema, separatePositionBuffer, enableOutlines, high
     const [vertexBuffers, bufIdx] = enumerateBuffers2({
       primary: vertexBuffer,
       highlight: highlightBuffer?.buffer,
-      pos: positionBuffer,
-      triPos: trianglePosBuffer?.buffer,
-      triId: triangleObjectIdBuffer?.buffer,
-      highlightTri: highlightBufferTri?.buffer
+      pos: positionBuffer
     });
     for (const childIndex of childIndices) {
       const meshes = groupMeshes.filter((sm) => sm.childIndex == childIndex);
@@ -1581,29 +1730,7 @@ function getGeometry(wasm2, schema, separatePositionBuffer, enableOutlines, high
             }
           }
         }
-        let numTrianglesInSubMesh = 0;
-        if (trianglePosBuffer && triangleObjectIdBuffer) {
-          const { x, y, z } = vertex.position;
-          let j = triangleOffset * 3 * 3;
-          if (vertexIndex && indexBuffer) {
-            numTrianglesInSubMesh = (endIdx - beginIdx) / 3;
-            for (let i = beginIdx; i < endIdx; i++) {
-              const idx = vertexIndex[i] + beginVtx;
-              trianglePosBuffer[j++] = x[idx];
-              trianglePosBuffer[j++] = y[idx];
-              trianglePosBuffer[j++] = z[idx];
-            }
-          } else {
-            numTrianglesInSubMesh = (endVtx - beginVtx) / 3;
-            for (let i = beginVtx; i < endVtx; i++) {
-              const idx = i;
-              trianglePosBuffer[j++] = x[idx];
-              trianglePosBuffer[j++] = y[idx];
-              trianglePosBuffer[j++] = z[idx];
-            }
-          }
-          triangleObjectIdBuffer.fill(objectId, triangleOffset, triangleOffset + numTrianglesInSubMesh);
-        }
+        const numTrianglesInSubMesh = vertexIndex && indexBuffer ? (endIdx - beginIdx) / 3 : (endVtx - beginVtx) / 3;
         if (positionBuffer) {
           const i16 = new Int16Array(positionBuffer, vertexOffset * positionStride);
           copyToInterleavedArray(wasm2, i16, vertex.position.x, 0, positionStride, beginVtx, endVtx);
@@ -1620,7 +1747,6 @@ function getGeometry(wasm2, schema, separatePositionBuffer, enableOutlines, high
         const highlightIndex = highlights.indices[objectId] ?? 0;
         if (highlightIndex) {
           highlightBuffer.fill(highlightIndex, vertexOffset, endVertex);
-          highlightBufferTri?.fill(highlightIndex, triangleOffset, endTriangle);
         }
         const prev = objectRanges.length - 1;
         if (prev >= 0 && objectRanges[prev].objectId == objectId) {
@@ -1639,7 +1765,6 @@ function getGeometry(wasm2, schema, separatePositionBuffer, enableOutlines, high
     }
     console.assert(vertexOffset == numVertices);
     console.assert(indexOffset == numIndices);
-    console.assert(triangleOffset == (triangleObjectIdBuffer?.length ?? 0));
     const indices = indexBuffer ?? numVertices;
     const [beginTexture, endTexture] = groupMeshes[0].textureRange;
     let baseColorTexture;
@@ -1660,12 +1785,7 @@ function getGeometry(wasm2, schema, separatePositionBuffer, enableOutlines, high
       color: (attributes & OptionalVertexAttribute2.color) != 0 ? { kind: "FLOAT_VEC4", buffer: bufIdx.primary, componentCount: 4, componentType: "UNSIGNED_BYTE", normalized: true, byteOffset: attribOffsets["color"], byteStride: stride } : null,
       projectedPos: (attributes & OptionalVertexAttribute2.projectedPos) != 0 ? { kind: "FLOAT_VEC4", buffer: bufIdx.primary, componentCount: 3, componentType: "SHORT", normalized: true, byteOffset: attribOffsets["projectedPos"], byteStride: stride } : null,
       deviations: deviations != 0 ? { kind: deviationsKind, buffer: bufIdx.primary, componentCount: deviations, componentType: "HALF_FLOAT", normalized: false, byteOffset: attribOffsets["deviations"], byteStride: stride } : null,
-      triangles0: trianglePosBuffer ? { kind: "FLOAT_VEC4", buffer: bufIdx.triPos, componentCount: 3, componentType: "SHORT", normalized: true, byteOffset: 0, byteStride: 18 } : null,
-      triangles1: trianglePosBuffer ? { kind: "FLOAT_VEC4", buffer: bufIdx.triPos, componentCount: 3, componentType: "SHORT", normalized: true, byteOffset: 6, byteStride: 18 } : null,
-      triangles2: trianglePosBuffer ? { kind: "FLOAT_VEC4", buffer: bufIdx.triPos, componentCount: 3, componentType: "SHORT", normalized: true, byteOffset: 12, byteStride: 18 } : null,
-      trianglesObjId: trianglePosBuffer ? { kind: "UNSIGNED_INT", buffer: bufIdx.triId, componentCount: 1, componentType: "UNSIGNED_INT", normalized: false, byteOffset: 0, byteStride: 4 } : null,
-      highlight: { kind: "UNSIGNED_INT", buffer: bufIdx.highlight, componentCount: 1, componentType: "UNSIGNED_BYTE", normalized: false, byteOffset: 0, byteStride: 0 },
-      highlightTri: { kind: "UNSIGNED_INT", buffer: bufIdx.highlightTri, componentCount: 1, componentType: "UNSIGNED_BYTE", normalized: false, byteOffset: 0, byteStride: 0 }
+      highlight: { kind: "UNSIGNED_INT", buffer: bufIdx.highlight, componentCount: 1, componentType: "UNSIGNED_BYTE", normalized: false, byteOffset: 0, byteStride: 0 }
     };
     objectRanges.sort((a, b) => a.objectId - b.objectId);
     subMeshes.push({
